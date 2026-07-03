@@ -1,0 +1,10 @@
+name = "ll-nastenka"
+main = "index.js"
+compatibility_date = "2025-01-01"
+
+[[kv_namespaces]]
+binding = "NASTENKA"
+id = "d37402d41f9346d3bdbf96ac41c38bac"
+
+[vars]
+WRITE_KEY = "LL-nastenka-8Kq3Zx7m"
