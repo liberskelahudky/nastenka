@@ -1,0 +1,547 @@
+<!DOCTYPE html>
+<html lang="cs">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>LL Nástěnka — Zadávání vzkazů</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,500;9..144,600;9..144,700&family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --orange:#E85520;
+    --brown:#3B1A0D;
+    --olive:#6B7A50;
+    --cream:#F0E8D6;
+    --paper:#FBF6EC;
+    --ink:#2A1508;
+    --muted:#8A745F;
+    --line:#E4D8C2;
+    --ok:#3f7d4e;
+    --err:#c0392b;
+
+    --hr:#6B7A50;
+    --vyroba:#E85520;
+    --vedeni:#3B1A0D;
+    --marketing:#B8894A;
+    --provoz:#5E7B8B;
+    --ostatni:#8A8A7A;
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{
+    font-family:'Plus Jakarta Sans',system-ui,sans-serif;
+    background:var(--cream);
+    color:var(--ink);
+    line-height:1.5;
+    padding:24px 16px 80px;
+  }
+  .wrap{max-width:860px;margin:0 auto}
+
+  header.top{display:flex;align-items:center;gap:14px;margin-bottom:24px}
+  .logo{
+    font-family:'Fraunces',serif;font-weight:600;font-size:26px;color:var(--brown);
+    letter-spacing:-.5px;line-height:1;
+  }
+  .logo span{color:var(--orange)}
+  .subtitle{font-size:13px;color:var(--muted);margin-top:2px}
+
+  .card{
+    background:var(--paper);border:1px solid var(--line);border-radius:16px;
+    padding:22px;margin-bottom:18px;
+  }
+  .card h2{
+    font-family:'Fraunces',serif;font-weight:600;font-size:19px;color:var(--brown);
+    margin-bottom:14px;display:flex;align-items:center;gap:9px;
+  }
+  .card h2 .dot{width:9px;height:9px;border-radius:50%;background:var(--orange)}
+
+  label{display:block;font-size:13px;font-weight:600;color:var(--brown);margin:12px 0 5px}
+  input[type=text],input[type=password],input[type=date],textarea,select{
+    width:100%;font:inherit;font-size:15px;color:var(--ink);
+    background:#fff;border:1.5px solid var(--line);border-radius:10px;padding:11px 13px;
+    transition:border-color .15s;
+  }
+  input:focus,textarea:focus,select:focus{outline:none;border-color:var(--orange)}
+  textarea{min-height:110px;resize:vertical}
+  .hint{font-size:12px;color:var(--muted);margin-top:5px}
+
+  .row{display:flex;gap:12px;flex-wrap:wrap}
+  .row > div{flex:1;min-width:150px}
+
+  .btn{
+    font:inherit;font-weight:600;font-size:15px;cursor:pointer;border:none;border-radius:10px;
+    padding:12px 20px;background:var(--orange);color:#fff;transition:filter .15s,transform .05s;
+  }
+  .btn:hover{filter:brightness(1.05)}
+  .btn:active{transform:translateY(1px)}
+  .btn.ghost{background:transparent;color:var(--brown);border:1.5px solid var(--line)}
+  .btn.ghost:hover{background:#fff}
+  .btn.small{padding:7px 13px;font-size:13px}
+  .btn.danger{background:transparent;color:var(--err);border:1.5px solid #eec9c4}
+  .btn:disabled{opacity:.5;cursor:not-allowed}
+  .actions{display:flex;gap:10px;flex-wrap:wrap;margin-top:18px}
+
+  .status{font-size:13px;padding:10px 13px;border-radius:9px;margin-top:12px;display:none}
+  .status.show{display:block}
+  .status.ok{background:#e7f2e9;color:var(--ok)}
+  .status.err{background:#fbeae8;color:var(--err)}
+  .status.info{background:#f3ecdf;color:var(--muted)}
+
+  /* department chips */
+  .chips{display:flex;gap:8px;flex-wrap:wrap;margin-top:5px}
+  .chip{
+    cursor:pointer;font-size:14px;font-weight:600;padding:9px 15px;border-radius:999px;
+    border:2px solid transparent;background:#fff;color:var(--brown);
+    display:flex;align-items:center;gap:7px;transition:all .12s;
+  }
+  .chip .swatch{width:11px;height:11px;border-radius:50%}
+  .chip.active{color:#fff}
+  .chip input{display:none}
+
+  /* priority toggle */
+  .prio{display:flex;align-items:center;gap:10px;margin-top:6px}
+  .switch{position:relative;width:46px;height:26px;flex:none}
+  .switch input{display:none}
+  .slider{position:absolute;inset:0;background:var(--line);border-radius:999px;transition:.2s;cursor:pointer}
+  .slider:before{content:"";position:absolute;width:20px;height:20px;left:3px;top:3px;background:#fff;border-radius:50%;transition:.2s}
+  .switch input:checked + .slider{background:var(--orange)}
+  .switch input:checked + .slider:before{transform:translateX(20px)}
+
+  /* message list */
+  .msg{
+    background:#fff;border:1px solid var(--line);border-radius:12px;padding:15px 16px;
+    margin-bottom:11px;border-left:5px solid var(--muted);position:relative;
+  }
+  .msg.expired{opacity:.5}
+  .msg-head{display:flex;align-items:center;gap:9px;flex-wrap:wrap;margin-bottom:6px}
+  .badge{font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.5px;
+    padding:3px 9px;border-radius:6px;color:#fff}
+  .msg h3{font-family:'Fraunces',serif;font-weight:600;font-size:17px;color:var(--brown)}
+  .msg p{font-size:14px;color:#4a3a2c;margin:4px 0 8px;white-space:pre-wrap}
+  .msg-meta{font-size:12px;color:var(--muted);display:flex;gap:12px;flex-wrap:wrap}
+  .msg-actions{display:flex;gap:8px;margin-top:10px}
+  .flag{font-size:11px;font-weight:700;color:var(--orange);border:1.5px solid var(--orange);
+    padding:2px 8px;border-radius:6px;letter-spacing:.5px}
+  .empty{text-align:center;color:var(--muted);padding:30px 10px;font-size:14px}
+
+  details.setup summary{cursor:pointer;font-weight:600;color:var(--brown);list-style:none}
+  details.setup summary::-webkit-details-marker{display:none}
+  details.setup summary:before{content:"▸ ";color:var(--orange)}
+  details.setup[open] summary:before{content:"▾ "}
+
+  .tvlink{background:#fff;border:1px dashed var(--olive);border-radius:9px;padding:11px 13px;
+    font-size:13px;word-break:break-all;color:var(--brown);margin-top:8px;display:none}
+  .tvlink.show{display:block}
+  .tvlink b{color:var(--olive)}
+  code{background:#f3ecdf;padding:2px 6px;border-radius:5px;font-size:13px}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header class="top">
+    <div>
+      <div class="logo">Libeřské <span>lahůdky</span></div>
+      <div class="subtitle">Nástěnka na prodejny a do výroby — zadávání vzkazů</div>
+    </div>
+  </header>
+
+  <!-- CONNECTION / SETUP -->
+  <div class="card">
+    <details class="setup" id="setupDetails">
+      <summary>⚙️ Nastavení připojení (GitHub Gist)</summary>
+      <div style="margin-top:16px">
+        <label>GitHub token <span style="font-weight:400;color:var(--muted)">(oprávnění „gist")</span></label>
+        <input type="password" id="token" placeholder="ghp_…" autocomplete="off">
+        <div class="hint">Token vytvoříš na github.com → Settings → Developer settings → Tokens (classic), zaškrtni jen <code>gist</code>. Uloží se jen v tomto prohlížeči.</div>
+
+        <label>Gist ID</label>
+        <div class="row">
+          <div style="flex:2"><input type="text" id="gistId" placeholder="např. 233959bf259502c0f1fd6a04e88b866a"></div>
+          <div style="flex:0;min-width:auto;display:flex;align-items:flex-end">
+            <button class="btn ghost small" id="createGist" style="white-space:nowrap">+ Vytvořit nový</button>
+          </div>
+        </div>
+        <div class="hint">Buď vlož ID existujícího Gistu, nebo klikni na „Vytvořit nový" a založí se automaticky.</div>
+
+        <div class="actions">
+          <button class="btn" id="connect">Připojit</button>
+          <button class="btn ghost" id="reload">Načíst vzkazy</button>
+        </div>
+        <div class="status" id="connStatus"></div>
+        <div class="tvlink" id="tvLink"></div>
+      </div>
+    </details>
+  </div>
+
+  <!-- NEW MESSAGE -->
+  <div class="card">
+    <h2><span class="dot"></span><span id="formTitle">Nový vzkaz</span></h2>
+
+    <label>Oddělení / kdo píše</label>
+    <div class="chips" id="deptChips"></div>
+
+    <div class="row">
+      <div>
+        <label>Podepsat se <span style="font-weight:400;color:var(--muted)">(jméno)</span></label>
+        <input type="text" id="author" placeholder="např. Kamila">
+      </div>
+      <div>
+        <label>Zobrazovat do <span style="font-weight:400;color:var(--muted)">(nepovinné)</span></label>
+        <input type="date" id="validUntil">
+      </div>
+    </div>
+
+    <label>Nadpis</label>
+    <input type="text" id="title" placeholder="např. Spouštíme masáže pro zaměstnance">
+
+    <label>Text vzkazu</label>
+    <textarea id="body" placeholder="Napiš, o co jde — kdy, kde, co mají lidi udělat…"></textarea>
+
+    <div class="prio">
+      <label class="switch"><input type="checkbox" id="priority"><span class="slider"></span></label>
+      <span style="font-size:14px;font-weight:600;color:var(--brown)">Označit jako <span style="color:var(--orange)">důležité</span> (zobrazí se navrchu a zvýrazněné)</span>
+    </div>
+
+    <div class="actions">
+      <button class="btn" id="saveBtn">Vyvěsit na nástěnku</button>
+      <button class="btn ghost" id="cancelEdit" style="display:none">Zrušit úpravu</button>
+    </div>
+    <div class="status" id="saveStatus"></div>
+  </div>
+
+  <!-- LIST -->
+  <div class="card">
+    <h2><span class="dot"></span>Vyvěšené vzkazy <span id="count" style="font-weight:400;color:var(--muted);font-size:14px"></span></h2>
+    <div id="list"><div class="empty">Zatím tu nic není. Připoj se v nastavení a vyvěš první vzkaz.</div></div>
+  </div>
+</div>
+
+<script>
+(function(){
+  "use strict";
+
+  var DEPTS = [
+    {id:"HR",        label:"HR / personální", color:"#6B7A50"},
+    {id:"VYROBA",    label:"Výroba",          color:"#E85520"},
+    {id:"VEDENI",    label:"Vedení",          color:"#3B1A0D"},
+    {id:"MARKETING", label:"Marketing",       color:"#B8894A"},
+    {id:"PROVOZ",    label:"Provoz",          color:"#5E7B8B"},
+    {id:"OSTATNI",   label:"Ostatní",         color:"#8A8A7A"}
+  ];
+  var FILENAME = "nastenka.json";
+  var LS = "ll_nastenka_cfg";
+
+  var cfg = load();
+  // Baked at deploy — one shared board; people only paste the shared token:
+  var GIST_ID="7f9c212ad166a73237504b90993eaae1", GIST_USER="liberskelahudky";
+  var BAKED = GIST_ID.indexOf("___")<0;
+  if(BAKED){ cfg.gistId = cfg.gistId||GIST_ID; cfg.user = cfg.user||GIST_USER; }
+  var messages = [];
+  var editingId = null;
+  var selectedDept = "HR";
+
+  function load(){
+    try{ return JSON.parse(localStorage.getItem(LS)) || {}; }catch(e){ return {}; }
+  }
+  function saveCfg(){ localStorage.setItem(LS, JSON.stringify(cfg)); }
+
+  var $ = function(id){ return document.getElementById(id); };
+
+  // ---- init fields ----
+  if(cfg.token) $("token").value = cfg.token;
+  if(cfg.gistId) $("gistId").value = cfg.gistId;
+  if(cfg.author) $("author").value = cfg.author;
+  if(BAKED){
+    var gi=$("gistId"); if(gi){ var r=gi.closest(".row"); if(r) r.style.display="none";
+      var h=r&&r.nextElementSibling; if(h&&h.className==="hint") h.style.display="none"; }
+    $("setupDetails").open = !cfg.token;
+  } else if(!cfg.token || !cfg.gistId){ $("setupDetails").open = true; }
+
+  // ---- department chips ----
+  var chipsEl = $("deptChips");
+  DEPTS.forEach(function(d){
+    var el = document.createElement("div");
+    el.className = "chip" + (d.id===selectedDept?" active":"");
+    el.style.borderColor = d.color;
+    if(d.id===selectedDept) el.style.background = d.color;
+    el.innerHTML = '<span class="swatch" style="background:'+d.color+'"></span>'+d.label;
+    el.onclick = function(){ selectDept(d.id); };
+    el.setAttribute("data-id", d.id);
+    chipsEl.appendChild(el);
+  });
+  function selectDept(id){
+    selectedDept = id;
+    Array.prototype.forEach.call(chipsEl.children, function(el){
+      var d = DEPTS.filter(function(x){return x.id===el.getAttribute("data-id");})[0];
+      var on = el.getAttribute("data-id")===id;
+      el.className = "chip"+(on?" active":"");
+      el.style.background = on ? d.color : "#fff";
+    });
+  }
+  function deptOf(id){ return DEPTS.filter(function(d){return d.id===id;})[0] || DEPTS[5]; }
+
+  // ---- status helpers ----
+  function status(el, msg, type){
+    el.className = "status show " + type;
+    el.textContent = msg;
+  }
+  function clearStatus(el){ el.className = "status"; }
+
+  // ---- GitHub Gist API ----
+  function apiHeaders(){
+    return {
+      "Authorization":"token "+cfg.token,
+      "Accept":"application/vnd.github+json",
+      "Content-Type":"application/json"
+    };
+  }
+
+  function fetchLatest(){
+    // read fresh from API (authenticated, avoids stale cache)
+    return fetch("https://api.github.com/gists/"+cfg.gistId, {headers:apiHeaders(), cache:"no-store"})
+      .then(function(r){
+        if(!r.ok) throw new Error("Gist se nepodařilo načíst ("+r.status+")");
+        return r.json();
+      })
+      .then(function(g){
+        var f = g.files && g.files[FILENAME];
+        if(!f) return {messages:[]};
+        var content = f.content;
+        if(f.truncated && f.raw_url){
+          return fetch(f.raw_url,{cache:"no-store"}).then(function(r){return r.json();});
+        }
+        try{ return JSON.parse(content); }catch(e){ return {messages:[]}; }
+      });
+  }
+
+  function writeData(data){
+    data.updated = new Date().toISOString();
+    var payload = { files:{} };
+    payload.files[FILENAME] = { content: JSON.stringify(data, null, 2) };
+    return fetch("https://api.github.com/gists/"+cfg.gistId, {
+      method:"PATCH", headers:apiHeaders(), body:JSON.stringify(payload)
+    }).then(function(r){
+      if(!r.ok) throw new Error("Uložení selhalo ("+r.status+")");
+      return r.json();
+    });
+  }
+
+  // ---- connect ----
+  $("connect").onclick = function(){
+    cfg.token = $("token").value.trim();
+    cfg.gistId = $("gistId").value.trim();
+    if(!cfg.token){ status($("connStatus"),"Vlož GitHub token.","err"); return; }
+    if(!cfg.gistId){ status($("connStatus"),"Vlož Gist ID nebo klikni na Vytvořit nový.","err"); return; }
+    saveCfg();
+    status($("connStatus"),"Připojuji…","info");
+    fetch("https://api.github.com/user",{headers:apiHeaders()})
+      .then(function(r){ if(!r.ok) throw new Error("Neplatný token ("+r.status+")"); return r.json(); })
+      .then(function(u){
+        cfg.user = u.login; saveCfg();
+        return loadMessages();
+      })
+      .then(function(){
+        status($("connStatus"),"✓ Připojeno jako "+cfg.user+". Vzkazy načteny.","ok");
+        showTvLink();
+      })
+      .catch(function(e){ status($("connStatus"), e.message, "err"); });
+  };
+
+  $("reload").onclick = function(){
+    if(!ensureCfg($("connStatus"))) return;
+    status($("connStatus"),"Načítám…","info");
+    loadMessages().then(function(){ status($("connStatus"),"✓ Načteno.","ok"); })
+      .catch(function(e){ status($("connStatus"), e.message,"err"); });
+  };
+
+  $("createGist").onclick = function(){
+    cfg.token = $("token").value.trim();
+    if(!cfg.token){ status($("connStatus"),"Nejdřív vlož GitHub token.","err"); return; }
+    saveCfg();
+    status($("connStatus"),"Zakládám nový Gist…","info");
+    var seed = {}; seed[FILENAME] = { content: JSON.stringify({messages:[],updated:new Date().toISOString()}, null, 2) };
+    fetch("https://api.github.com/gists",{
+      method:"POST", headers:apiHeaders(),
+      body:JSON.stringify({description:"LL Nástěnka — data", public:false, files:seed})
+    }).then(function(r){ if(!r.ok) throw new Error("Nepodařilo se založit ("+r.status+")"); return r.json(); })
+      .then(function(g){
+        cfg.gistId = g.id; cfg.user = g.owner ? g.owner.login : cfg.user; saveCfg();
+        $("gistId").value = g.id;
+        messages = [];
+        render();
+        status($("connStatus"),"✓ Nový Gist založen. Zkopíruj si odkaz pro TV níže.","ok");
+        showTvLink();
+      })
+      .catch(function(e){ status($("connStatus"), e.message,"err"); });
+  };
+
+  function showTvLink(){
+    if(!cfg.user || !cfg.gistId) return;
+    var raw = "https://gist.githubusercontent.com/"+cfg.user+"/"+cfg.gistId+"/raw/"+FILENAME;
+    var el = $("tvLink");
+    el.className = "tvlink show";
+    el.innerHTML = '<b>Odkaz pro TV (zadej ho v TV zobrazení do nastavení):</b><br>'+raw;
+  }
+
+  function ensureCfg(statusEl){
+    if(!cfg.token || !cfg.gistId){
+      status(statusEl,"Nejdřív se připoj v nastavení (token + Gist ID).","err");
+      $("setupDetails").open = true;
+      return false;
+    }
+    return true;
+  }
+
+  function loadMessages(){
+    return fetchLatest().then(function(d){
+      messages = (d && d.messages) ? d.messages : [];
+      render();
+    });
+  }
+
+  // ---- save (fetch-modify-write to stay safe with multiple posters) ----
+  $("saveBtn").onclick = function(){
+    if(!ensureCfg($("saveStatus"))) return;
+    var title = $("title").value.trim();
+    var body = $("body").value.trim();
+    if(!title){ status($("saveStatus"),"Doplň nadpis.","err"); return; }
+    cfg.author = $("author").value.trim(); saveCfg();
+
+    var msg = {
+      id: editingId || ("m"+Date.now()+Math.floor(Math.random()*999)),
+      dept: selectedDept,
+      author: $("author").value.trim(),
+      title: title,
+      body: body,
+      priority: $("priority").checked ? "high":"normal",
+      validUntil: $("validUntil").value || "",
+      created: editingId ? (findMsg(editingId)||{}).created || new Date().toISOString() : new Date().toISOString()
+    };
+
+    $("saveBtn").disabled = true;
+    status($("saveStatus"), editingId?"Ukládám úpravu…":"Vyvěšuji…","info");
+
+    fetchLatest().then(function(d){
+      var list = (d && d.messages) ? d.messages : [];
+      var idx = -1;
+      for(var i=0;i<list.length;i++){ if(list[i].id===msg.id){ idx=i; break; } }
+      if(idx>=0) list[idx] = msg; else list.unshift(msg);
+      d.messages = list;
+      return writeData(d).then(function(){ messages = list; });
+    }).then(function(){
+      status($("saveStatus"), editingId?"✓ Vzkaz upraven.":"✓ Vyvěšeno na nástěnku.","ok");
+      resetForm();
+      render();
+    }).catch(function(e){
+      status($("saveStatus"), e.message,"err");
+    }).then(function(){ $("saveBtn").disabled = false; });
+  };
+
+  $("cancelEdit").onclick = resetForm;
+
+  function resetForm(){
+    editingId = null;
+    $("title").value=""; $("body").value="";
+    $("priority").checked=false; $("validUntil").value="";
+    selectDept("HR");
+    $("formTitle").textContent = "Nový vzkaz";
+    $("saveBtn").textContent = "Vyvěsit na nástěnku";
+    $("cancelEdit").style.display="none";
+  }
+
+  function findMsg(id){ return messages.filter(function(m){return m.id===id;})[0]; }
+
+  function editMsg(id){
+    var m = findMsg(id); if(!m) return;
+    editingId = id;
+    $("title").value = m.title; $("body").value = m.body||"";
+    $("author").value = m.author||""; $("validUntil").value = m.validUntil||"";
+    $("priority").checked = m.priority==="high";
+    selectDept(m.dept);
+    $("formTitle").textContent = "Úprava vzkazu";
+    $("saveBtn").textContent = "Uložit změny";
+    $("cancelEdit").style.display="inline-block";
+    window.scrollTo({top:0,behavior:"smooth"});
+  }
+
+  function deleteMsg(id){
+    if(!confirm("Opravdu smazat tento vzkaz?")) return;
+    status($("saveStatus"),"Mažu…","info");
+    fetchLatest().then(function(d){
+      d.messages = (d.messages||[]).filter(function(m){return m.id!==id;});
+      return writeData(d).then(function(){ messages = d.messages; });
+    }).then(function(){
+      status($("saveStatus"),"✓ Smazáno.","ok"); render();
+    }).catch(function(e){ status($("saveStatus"), e.message,"err"); });
+  }
+
+  // ---- render list ----
+  function isExpired(m){
+    if(!m.validUntil) return false;
+    var end = new Date(m.validUntil+"T23:59:59");
+    return end < new Date();
+  }
+  function fmtDate(iso){
+    try{ return new Date(iso).toLocaleDateString("cs-CZ",{day:"numeric",month:"numeric",year:"numeric"}); }
+    catch(e){ return ""; }
+  }
+
+  function render(){
+    var list = $("list");
+    $("count").textContent = messages.length ? "("+messages.length+")" : "";
+    if(!messages.length){
+      list.innerHTML = '<div class="empty">Zatím tu nic není. Vyvěs první vzkaz výše.</div>';
+      return;
+    }
+    var sorted = messages.slice().sort(function(a,b){
+      var ap=a.priority==="high"?1:0, bp=b.priority==="high"?1:0;
+      if(ap!==bp) return bp-ap;
+      return new Date(b.created)-new Date(a.created);
+    });
+    list.innerHTML = "";
+    sorted.forEach(function(m){
+      var d = deptOf(m.dept);
+      var exp = isExpired(m);
+      var el = document.createElement("div");
+      el.className = "msg"+(exp?" expired":"");
+      el.style.borderLeftColor = d.color;
+      var meta = [];
+      if(m.author) meta.push("— "+m.author);
+      meta.push(fmtDate(m.created));
+      if(m.validUntil) meta.push((exp?"vypršelo ":"zobrazovat do ")+fmtDate(m.validUntil+"T00:00:00"));
+      el.innerHTML =
+        '<div class="msg-head">'+
+          '<span class="badge" style="background:'+d.color+'">'+d.label+'</span>'+
+          (m.priority==="high"?'<span class="flag">DŮLEŽITÉ</span>':'')+
+          (exp?'<span style="font-size:12px;color:var(--err);font-weight:600">vypršelo</span>':'')+
+        '</div>'+
+        '<h3></h3><p></p>'+
+        '<div class="msg-meta">'+meta.map(function(x){return '<span></span>';}).join('')+'</div>'+
+        '<div class="msg-actions">'+
+          '<button class="btn ghost small" data-edit="'+m.id+'">Upravit</button>'+
+          '<button class="btn danger small" data-del="'+m.id+'">Smazat</button>'+
+        '</div>';
+      el.querySelector("h3").textContent = m.title;
+      el.querySelector("p").textContent = m.body||"";
+      var spans = el.querySelectorAll(".msg-meta span");
+      meta.forEach(function(x,i){ if(spans[i]) spans[i].textContent = x; });
+      list.appendChild(el);
+    });
+    // wire buttons
+    Array.prototype.forEach.call(list.querySelectorAll("[data-edit]"),function(b){
+      b.onclick=function(){ editMsg(b.getAttribute("data-edit")); };
+    });
+    Array.prototype.forEach.call(list.querySelectorAll("[data-del]"),function(b){
+      b.onclick=function(){ deleteMsg(b.getAttribute("data-del")); };
+    });
+  }
+
+  // auto-connect if configured
+  if(cfg.token && cfg.gistId){
+    loadMessages().then(function(){ showTvLink(); }).catch(function(){});
+    if(cfg.user) showTvLink();
+  }
+})();
+</script>
+</body>
+</html>
