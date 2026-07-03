@@ -132,8 +132,8 @@
     <div class="brand">Libeřské <span>lahůdky</span></div>
     <div class="setupbox">
       <h1 style="font-family:'Fraunces';color:var(--brown);font-size:26px">Nastavení televize</h1>
-      <label>Odkaz pro TV <span style="font-weight:400;color:var(--muted)">(z admin stránky)</span></label>
-      <input type="text" id="rawUrlInput" placeholder="https://gist.githubusercontent.com/…/raw/nastenka.json">
+      <label>Adresa serveru (API) <span style="font-weight:400;color:var(--muted)">(záložní, jinak z config.json)</span></label>
+      <input type="text" id="rawUrlInput" placeholder="https://ll-nastenka.…workers.dev">
       <div class="hint">Zkopíruj odkaz, který se ti zobrazí v admin stránce po připojení, a vlož ho sem. Nastaví se jen na této televizi.</div>
       <button id="saveSetup">Uložit a spustit</button>
     </div>
@@ -160,10 +160,7 @@
   };
 
   var $=function(id){return document.getElementById(id);};
-  // Baked at deploy — same data source for every TV, zero setup:
-  var DATA_URL="https://gist.githubusercontent.com/liberskelahudky/7f9c212ad166a73237504b90993eaae1/raw/nastenka.json";
-  var baked=(DATA_URL.indexOf("___")<0)?DATA_URL:"";
-  var rawUrl = baked || localStorage.getItem(LS)||"";
+  var rawUrl = localStorage.getItem(LS)||"";  // doplní se z config.json níže
   var messages=[], pages=[], pageIdx=0, pageTimer=null;
 
   // ---- clock ----
@@ -196,11 +193,16 @@
     hideSetup(); loadData();
   };
 
-  if(!rawUrl){ showSetup(); }
-  else { loadData(); }
+  // Adresa serveru z config.json (stejný repozitář) → TV nic nenastavuje
+  fetch("./config.json?t="+Date.now(),{cache:"no-store"})
+    .then(function(r){return r.json();})
+    .then(function(c){ rawUrl=(c&&c.api)||rawUrl; startTV(); })
+    .catch(function(){ startTV(); });
+  function startTV(){ if(!rawUrl){ showSetup(); } else { loadData(); } }
 
   // ---- data ----
   function loadData(){
+    if(!rawUrl) return;
     var url = rawUrl + (rawUrl.indexOf("?")>=0?"&":"?") + "t=" + Date.now();
     fetch(url,{cache:"no-store"})
       .then(function(r){ if(!r.ok) throw new Error(r.status); return r.json(); })
