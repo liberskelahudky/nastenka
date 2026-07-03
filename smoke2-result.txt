@@ -1,0 +1,10 @@
+== add with image ==
+{"ok":true,"messages":[{"id":"imgtest","dept":"HR","author":"CI","title":"Foto test","body":"x","priority":"normal","validUntil":"","created":"2026-07-03T10:00:00.000Z","img":"imgtest"},{"id":"m1783076318516742","dept":"VYROBA","author":"Vlado","title":"Test","body":"Sláva nazdar výletu","priority":"high","validUntil":"2026-07-17","created":"2026-07-03T10:58:38.516Z"}]}
+== list (ma mit img=imgtest) ==
+{"messages":[{"id":"imgtest","dept":"HR","author":"CI","title":"Foto test","body":"x","priority":"normal","validUntil":"","created":"2026-07-03T10:00:00.000Z","img":"imgtest"},{"id":"m1783076318516742","dept":"VYROBA","author":"Vlado","title":"Test","body":"Sláva nazdar výletu","priority":"high","validUntil":"2026-07-17","created":"2026-07-03T10:58:38.516Z"}],"updated":"2026-07-03T11:07:37.016Z"}
+== GET image (ma byt 200 image/jpeg) ==
+HTTP 200 type=image/jpeg size=10
+== delete ==
+{"ok":true,"messages":[{"id":"m1783076318516742","dept":"VYROBA","author":"Vlado","title":"Test","body":"Sláva nazdar výletu","priority":"high","validUntil":"2026-07-17","created":"2026-07-03T10:58:38.516Z"}]}
+== GET image po smazani (ma byt 404) ==
+HTTP 404
