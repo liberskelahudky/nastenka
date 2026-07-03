@@ -90,14 +90,13 @@
   .fwhen{margin-left:auto;font-family:'Bebas Neue',sans-serif;letter-spacing:.1em;text-transform:uppercase;
     font-size:clamp(14px,1.3vw,24px);opacity:.7}
   .ftitle{font-family:'Bebas Neue',sans-serif;letter-spacing:.01em;
-    font-size:calc(var(--fs)*clamp(54px,6.8vw,168px));line-height:.9;margin-bottom:2vh;overflow:hidden;max-height:56vh}
+    font-size:calc(var(--fs)*var(--tfit,1)*clamp(54px,6.8vw,168px));line-height:.9;margin-bottom:2vh}
   .ftitle span{display:inline-block}
   .fcard.enter .ftitle span{opacity:0;transform:translateY(60px) rotate(-4deg);
     animation:wordUp .5s cubic-bezier(.2,1.4,.4,1) both}
   @keyframes wordUp{to{opacity:1;transform:none}}
   .fbody{font-family:'Plus Jakarta Sans';font-weight:700;white-space:pre-wrap;
-    font-size:calc(var(--fs)*clamp(22px,2.4vw,46px));line-height:1.34;flex:1;overflow:hidden;
-    display:-webkit-box;-webkit-line-clamp:5;-webkit-box-orient:vertical}
+    font-size:calc(var(--fs)*var(--tfit,1)*clamp(20px,2.2vw,44px));line-height:1.34;flex:0 1 auto}
   .ffoot{margin-top:2vh;padding-top:1.4vh;border-top:3px dashed rgba(0,0,0,.22);
     font-family:'Bebas Neue',sans-serif;letter-spacing:.06em;font-size:calc(var(--fs)*clamp(18px,1.7vw,32px))}
   .fprog{position:absolute;left:0;bottom:0;height:9px;background:rgba(0,0,0,.35);width:0}
@@ -228,6 +227,7 @@
   function tick(){ var d=new Date(),h=d.getHours(),m=d.getMinutes();
     $("time").textContent=h+":"+(m<10?"0"+m:m); $("date").textContent=DNI[d.getDay()]+" "+d.getDate()+". "+MES[d.getMonth()]; }
   tick(); setInterval(tick,10000);
+  if(document.fonts && document.fonts.ready){ document.fonts.ready.then(function(){ if(messages.length) fitText(); }); }
 
   // ---- setup + controls ----
   function showSetup(){ $("stage").classList.add("hidden"); $("emptyState").classList.add("hidden"); $("setupState").classList.remove("hidden"); if(rawUrl)$("rawUrlInput").value=rawUrl; }
@@ -320,6 +320,15 @@
     f.querySelector(".fbody").textContent=m.body||"";
     f.querySelector(".fauth").textContent=m.author?("— "+m.author):"";
     startProgress();
+    var im=f.querySelector(".fphoto"); if(im){ im.onload=fitText; }
+    fitText(); if(window.requestAnimationFrame){ requestAnimationFrame(fitText); }
+  }
+  function fitText(){
+    var st=$("feature").querySelector(".sticker"); if(!st) return;
+    var tfit=1, guard=0; st.style.setProperty("--tfit",1);
+    while(st.scrollHeight > st.clientHeight + 2 && tfit>0.45 && guard<16){
+      tfit-=0.07; st.style.setProperty("--tfit", Math.round(tfit*100)/100); guard++;
+    }
   }
   function startProgress(){
     var p=$("fprog"); if(!p) return;
