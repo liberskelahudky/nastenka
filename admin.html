@@ -134,6 +134,12 @@
   .tvlink.show{display:block}
   .tvlink b{color:var(--olive)}
   code{background:#f3ecdf;padding:2px 6px;border-radius:5px;font-size:13px}
+  .photo-field{margin-top:4px}
+  .photo-preview{margin-top:8px}
+  .photo-preview .thumb{display:inline-block}
+  .photo-preview img{max-width:240px;max-height:170px;border-radius:10px;border:1px solid var(--line);display:block}
+  .photo-preview .rm{margin-top:6px;font:inherit;font-size:13px;font-weight:600;color:var(--err);background:transparent;border:1.5px solid #eec9c4;border-radius:8px;padding:6px 12px;cursor:pointer}
+  .listthumb{max-width:150px;max-height:110px;border-radius:8px;border:1px solid var(--line);margin:6px 0;display:block}
 </style>
 </head>
 <body>
@@ -168,6 +174,13 @@
 
     <label>Text vzkazu</label>
     <textarea id="body" placeholder="Napiš, o co jde — kdy, kde, co mají lidi udělat…"></textarea>
+
+    <label>Foto <span style="font-weight:400;color:var(--muted)">(nepovinné)</span></label>
+    <div class="photo-field">
+      <input type="file" id="photoInput" accept="image/*" style="display:none">
+      <button type="button" class="btn ghost small" id="photoBtn">📷 Přidat / vyfotit</button>
+      <div id="photoPreview" class="photo-preview"></div>
+    </div>
 
     <div class="prio">
       <label class="switch"><input type="checkbox" id="priority"><span class="slider"></span></label>
@@ -235,6 +248,33 @@
 
   if(localStorage.getItem(LS_AUTHOR)) $("author").value=localStorage.getItem(LS_AUTHOR);
 
+  // ---- foto ----
+  var pendingImage=null, removeImage=false, currentImgId="";
+  $("photoBtn").onclick=function(){ $("photoInput").click(); };
+  $("photoInput").onchange=function(e){
+    var f=e.target.files&&e.target.files[0]; if(!f) return;
+    resizeImage(f,function(dataUrl){ pendingImage=dataUrl; removeImage=false; showPhoto(dataUrl); });
+    $("photoInput").value="";
+  };
+  function showPhoto(src){
+    $("photoPreview").innerHTML='<div class="thumb"><img src="'+src+'"><button type="button" class="rm" id="photoRemove">✕ Odebrat foto</button></div>';
+    $("photoRemove").onclick=function(){ pendingImage=null; if(currentImgId) removeImage=true; $("photoPreview").innerHTML=""; };
+  }
+  function resizeImage(file,cb){
+    var img=new Image(), url=URL.createObjectURL(file);
+    img.onload=function(){
+      var max=1400, w=img.width, h=img.height;
+      if(w>h && w>max){ h=Math.round(h*max/w); w=max; }
+      else if(h>=w && h>max){ w=Math.round(w*max/h); h=max; }
+      var cv=document.createElement("canvas"); cv.width=w; cv.height=h;
+      cv.getContext("2d").drawImage(img,0,0,w,h);
+      URL.revokeObjectURL(url);
+      cb(cv.toDataURL("image/jpeg",0.82));
+    };
+    img.onerror=function(){ URL.revokeObjectURL(url); alert("Obrázek se nepodařilo načíst."); };
+    img.src=url;
+  }
+
   // ---- backend (Cloudflare Worker; adresa z config.json) ----
   fetch('./config.json?t='+Date.now(),{cache:'no-store'})
     .then(function(r){return r.json();})
@@ -283,7 +323,10 @@
     };
     $("saveBtn").disabled=true;
     status($("saveStatus"), editingId?"Ukládám úpravu…":"Vyvěšuji…","info");
-    apiPost({action: editingId?"update":"add", msg:msg}).then(function(d){
+    var payload={action: editingId?"update":"add", msg:msg};
+    if(pendingImage) payload.image=pendingImage;
+    if(removeImage) payload.removeImage=true;
+    apiPost(payload).then(function(d){
       messages=(d&&d.messages)||messages;
       status($("saveStatus"), editingId?"✓ Vzkaz upraven.":"✓ Vyvěšeno na nástěnku.","ok");
       resetForm(); render();
@@ -301,6 +344,8 @@
     $("formTitle").textContent="Nový vzkaz";
     $("saveBtn").textContent="Vyvěsit na nástěnku";
     $("cancelEdit").style.display="none";
+    pendingImage=null; removeImage=false; currentImgId="";
+    $("photoPreview").innerHTML="";
   }
   function findMsg(id){return messages.filter(function(m){return m.id===id;})[0];}
 
@@ -311,6 +356,9 @@
     $("author").value=m.author||"";$("validUntil").value=m.validUntil||"";
     $("priority").checked=m.priority==="high";
     selectDept(m.dept);
+    currentImgId = m.img ? m.id : "";
+    pendingImage=null; removeImage=false;
+    if(m.img){ showPhoto(API+"?img="+m.id+"&t="+Date.now()); } else { $("photoPreview").innerHTML=""; }
     $("formTitle").textContent="Úprava vzkazu";
     $("saveBtn").textContent="Uložit změny";
     $("cancelEdit").style.display="inline-block";
@@ -355,6 +403,7 @@
           (m.priority==="high"?'<span class="flag">DŮLEŽITÉ</span>':'')+
           (exp?'<span style="font-size:12px;color:var(--err);font-weight:600">vypršelo</span>':'')+
         '</div><h3></h3><p></p>'+
+        (m.img?('<img class="listthumb" src="'+API+'?img='+m.id+'&t='+encodeURIComponent(m.created)+'">'):'')+
         '<div class="msg-meta">'+meta.map(function(){return '<span></span>';}).join('')+'</div>'+
         '<div class="msg-actions">'+
           '<button class="btn ghost small" data-edit="'+m.id+'">Upravit</button>'+
