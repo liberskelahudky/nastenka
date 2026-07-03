@@ -77,8 +77,9 @@
 
   .fribbon{position:absolute;top:3vh;right:-4vw;background:#231007;color:#fff;font-family:'Bebas Neue',sans-serif;
     font-size:clamp(14px,1.2vw,22px);letter-spacing:.2em;padding:.6vh 4.5vw;transform:rotate(40deg);z-index:5}
-  .fphoto{width:100%;max-height:38%;object-fit:cover;border-radius:16px;margin-bottom:2.2vh;flex:none;
-    box-shadow:0 12px 26px rgba(0,0,0,.3);transform:rotate(.8deg)}
+  .fphoto-wrap{align-self:center;max-width:100%;background:#fff;padding:1.2vh 1.2vh 1.6vh;border-radius:8px;
+    box-shadow:0 16px 34px rgba(0,0,0,.34);transform:rotate(-1.4deg);margin-bottom:2.2vh;flex:none;line-height:0}
+  .fphoto{display:block;max-width:100%;max-height:40vh;object-fit:contain;border-radius:3px}
   .feyebrow{display:flex;align-items:center;gap:1vw;margin-bottom:1.6vh}
   .ftag{background:rgba(0,0,0,.16);color:var(--ink);font-family:'Bebas Neue',sans-serif;
     font-size:calc(var(--fs)*clamp(18px,1.7vw,32px));letter-spacing:.12em;text-transform:uppercase;
@@ -308,7 +309,7 @@
     var html='<div class="fcard'+(animate?" enter":"")+'">'+
       '<div class="sticker" style="--bg:'+d.bg+';--ink:'+d.ink+'">'+
         (m.priority==="high"?'<div class="fribbon">DŮLEŽITÉ</div>':'')+
-        (m.img?'<img class="fphoto" src="'+imgUrl(m)+'">':'')+
+        (m.img?'<div class="fphoto-wrap"><img class="fphoto" src="'+imgUrl(m)+'"></div>':'')+
         '<div class="feyebrow"><span class="ftag">'+d.label+'</span><span class="fpulse"></span><span class="fwhen">'+esc(when)+'</span></div>'+
         '<div class="ftitle">'+titleHtml+'</div>'+
         '<div class="fbody"></div>'+
