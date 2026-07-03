@@ -70,7 +70,7 @@
 
   /* ---- feature ---- */
   .feature{flex:1;min-width:0;position:relative}
-  .fcard{position:absolute;inset:0;background:rgba(20,8,3,.55);border:1.5px solid rgba(223,189,149,.28);
+  .fcard{position:absolute;inset:0;background:linear-gradient(135deg,rgba(22,9,3,.66),rgba(22,9,3,.42));border:1.5px solid rgba(223,189,149,.28);
     border-radius:24px;padding:5vh 4vw 4vh;display:flex;flex-direction:column;overflow:hidden;
     box-shadow:0 20px 60px rgba(0,0,0,.5);backdrop-filter:blur(3px)}
   .fcard:before{content:"";position:absolute;left:0;top:0;bottom:0;width:16px;background:var(--c);
@@ -78,15 +78,33 @@
   .fcard.enter{animation:slidein .6s cubic-bezier(.2,.85,.3,1) both}
   @keyframes slidein{from{opacity:0;transform:translateX(6%) scale(.98)}to{opacity:1;transform:none}}
 
+  .fglow{inset:0;background:radial-gradient(circle at 80% 12%, var(--c), transparent 58%);opacity:.3;
+    animation:breathe 6s ease-in-out infinite}
+  @keyframes breathe{0%,100%{opacity:.22}50%{opacity:.42}}
+  .fshine{top:0;left:-45%;width:45%;height:100%;
+    background:linear-gradient(105deg,transparent 0%,rgba(255,255,255,.16) 50%,transparent 100%)}
+  .fcard.enter .fshine{animation:sheen 1.15s .15s ease-out both}
+  @keyframes sheen{to{left:130%}}
+  .fglow,.fshine{position:absolute;z-index:0;pointer-events:none}
+  .fcard>.feyebrow,.fcard>.ftitle,.fcard>.fbody,.fcard>.ffoot,.fcard>.fphoto{position:relative;z-index:2}
+  .feyebrow{display:flex;align-items:center;gap:1.1vw;margin-bottom:1.8vh}
+  .feyebrow .ftab{margin-bottom:0}
+  .fpulse{width:1vw;height:1vw;max-width:15px;max-height:15px;border-radius:50%;background:var(--c);
+    box-shadow:0 0 14px var(--c);animation:pdot 1.7s ease-in-out infinite}
+  @keyframes pdot{0%,100%{transform:scale(1);opacity:1}50%{transform:scale(1.5);opacity:.5}}
+  .fwhen{margin-left:auto;font-family:'Bebas Neue',sans-serif;color:var(--gold);letter-spacing:.1em;
+    font-size:clamp(14px,1.3vw,24px);text-transform:uppercase}
   .ftab{align-self:flex-start;background:var(--c);color:#231007;font-family:'Bebas Neue',sans-serif;
     font-size:calc(var(--fs) * clamp(20px,1.9vw,36px));text-transform:uppercase;letter-spacing:.12em;
     padding:.5vh 1.6vw;border-radius:10px;margin-bottom:2vh}
   .fphoto{width:100%;max-height:40%;object-fit:cover;border-radius:16px;margin-bottom:2.4vh;flex:none;
     box-shadow:0 10px 30px rgba(0,0,0,.5);border:1px solid rgba(223,189,149,.25)}
   .ftitle{font-family:'Bebas Neue',sans-serif;color:#fff;letter-spacing:.02em;
-    font-size:calc(var(--fs) * clamp(46px,5.6vw,132px));line-height:.98;margin-bottom:2.2vh;
-    text-shadow:0 3px 24px rgba(0,0,0,.5);
-    display:-webkit-box;-webkit-line-clamp:3;-webkit-box-orient:vertical;overflow:hidden}
+    font-size:calc(var(--fs) * clamp(50px,6.2vw,150px));line-height:.95;margin-bottom:2.2vh;
+    text-shadow:0 3px 26px rgba(0,0,0,.55);overflow:hidden;max-height:54vh}
+  .ftitle span{display:inline-block}
+  .fcard.enter .ftitle span{opacity:0;transform:translateY(48px);animation:wordUp .55s cubic-bezier(.2,.9,.3,1.12) both}
+  @keyframes wordUp{to{opacity:1;transform:none}}
   .fbody{font-family:'Plus Jakarta Sans';font-weight:500;color:var(--cream);white-space:pre-wrap;
     font-size:calc(var(--fs) * clamp(22px,2.4vw,46px));line-height:1.38;flex:1;overflow:hidden;
     display:-webkit-box;-webkit-line-clamp:6;-webkit-box-orient:vertical}
@@ -306,22 +324,26 @@
     if(act && act.scrollIntoView){ try{ act.scrollIntoView({block:"center",inline:"center",behavior:"smooth"}); }catch(e){ act.scrollIntoView(); } }
   }
 
+  function esc(s){ return String(s).replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;"); }
   function renderFeature(animate){
     var m=messages[featIdx]; if(!m) return;
     var d=DEPTS[m.dept]||DEPTS.OSTATNI;
     var multi=messages.length>1;
+    var when=(m.validUntil?("platí do "+fmt(m.validUntil+"T00:00:00")):("vyvěšeno "+fmt(m.created)));
+    var words=(m.title||"").split(/\s+/);
+    var titleHtml=words.map(function(w,i){ return '<span style="animation-delay:'+(0.12+i*0.08).toFixed(2)+'s">'+esc(w)+'</span>'; }).join(' ');
     var html='<div class="fcard'+(animate?" enter":"")+(m.priority==="high"?" high":"")+'" style="--c:'+d.color+'">'+
+      '<div class="fglow"></div><div class="fshine"></div>'+
       (m.priority==="high"?'<div class="fribbon">DŮLEŽITÉ</div>':'')+
       (m.img?'<img class="fphoto" src="'+imgUrl(m)+'">':'')+
-      '<span class="ftab">'+d.label+'</span>'+
-      '<div class="ftitle"></div><div class="fbody"></div>'+
-      '<div class="ffoot"><span class="fauth"></span><span class="fdate"></span></div>'+
+      '<div class="feyebrow"><span class="ftab">'+d.label+'</span><span class="fpulse"></span><span class="fwhen">'+esc(when)+'</span></div>'+
+      '<div class="ftitle">'+titleHtml+'</div>'+
+      '<div class="fbody"></div>'+
+      '<div class="ffoot"><span class="fauth"></span></div>'+
       (multi?'<div class="fprog" id="fprog"></div>':'')+'</div>';
-    $("feature").innerHTML=html;
-    $("feature").querySelector(".ftitle").textContent=m.title||"";
-    $("feature").querySelector(".fbody").textContent=m.body||"";
-    $("feature").querySelector(".fauth").textContent=m.author?("— "+m.author):"";
-    $("feature").querySelector(".fdate").textContent=(m.validUntil?("platí do "+fmt(m.validUntil+"T00:00:00")):("vyvěšeno "+fmt(m.created)));
+    var f=$("feature"); f.innerHTML=html;
+    f.querySelector(".fbody").textContent=m.body||"";
+    f.querySelector(".fauth").textContent=m.author?("— "+m.author):"";
     startProgress();
   }
   function startProgress(){
