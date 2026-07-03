@@ -145,34 +145,6 @@
     </div>
   </header>
 
-  <!-- CONNECTION / SETUP -->
-  <div class="card">
-    <details class="setup" id="setupDetails">
-      <summary>⚙️ Nastavení připojení (GitHub Gist)</summary>
-      <div style="margin-top:16px">
-        <label>GitHub token <span style="font-weight:400;color:var(--muted)">(oprávnění „gist")</span></label>
-        <input type="password" id="token" placeholder="ghp_…" autocomplete="off">
-        <div class="hint">Token vytvoříš na github.com → Settings → Developer settings → Tokens (classic), zaškrtni jen <code>gist</code>. Uloží se jen v tomto prohlížeči.</div>
-
-        <label>Gist ID</label>
-        <div class="row">
-          <div style="flex:2"><input type="text" id="gistId" placeholder="např. 233959bf259502c0f1fd6a04e88b866a"></div>
-          <div style="flex:0;min-width:auto;display:flex;align-items:flex-end">
-            <button class="btn ghost small" id="createGist" style="white-space:nowrap">+ Vytvořit nový</button>
-          </div>
-        </div>
-        <div class="hint">Buď vlož ID existujícího Gistu, nebo klikni na „Vytvořit nový" a založí se automaticky.</div>
-
-        <div class="actions">
-          <button class="btn" id="connect">Připojit</button>
-          <button class="btn ghost" id="reload">Načíst vzkazy</button>
-        </div>
-        <div class="status" id="connStatus"></div>
-        <div class="tvlink" id="tvLink"></div>
-      </div>
-    </details>
-  </div>
-
   <!-- NEW MESSAGE -->
   <div class="card">
     <h2><span class="dot"></span><span id="formTitle">Nový vzkaz</span></h2>
@@ -228,238 +200,119 @@
     {id:"PROVOZ",    label:"Provoz",          color:"#5E7B8B"},
     {id:"OSTATNI",   label:"Ostatní",         color:"#8A8A7A"}
   ];
-  var FILENAME = "nastenka.json";
-  var LS = "ll_nastenka_cfg";
+  var LS_API="ll_nastenka_api";
+  var LS_AUTHOR="ll_nastenka_author";
+  var WRITE_KEY="LL-nastenka-8Kq3Zx7m"; // musí sedět s proměnnou WRITE_KEY ve Workeru (nebo Worker klíč nevyžaduje)
 
-  var cfg = load();
-  // Baked at deploy — one shared board; people only paste the shared token:
-  var GIST_ID="7f9c212ad166a73237504b90993eaae1", GIST_USER="liberskelahudky";
-  var BAKED = GIST_ID.indexOf("___")<0;
-  if(BAKED){ cfg.gistId = cfg.gistId||GIST_ID; cfg.user = cfg.user||GIST_USER; }
-  var messages = [];
-  var editingId = null;
-  var selectedDept = "HR";
-
-  function load(){
-    try{ return JSON.parse(localStorage.getItem(LS)) || {}; }catch(e){ return {}; }
-  }
-  function saveCfg(){ localStorage.setItem(LS, JSON.stringify(cfg)); }
-
-  var $ = function(id){ return document.getElementById(id); };
-
-  // ---- init fields ----
-  if(cfg.token) $("token").value = cfg.token;
-  if(cfg.gistId) $("gistId").value = cfg.gistId;
-  if(cfg.author) $("author").value = cfg.author;
-  if(BAKED){
-    var gi=$("gistId"); if(gi){ var r=gi.closest(".row"); if(r) r.style.display="none";
-      var h=r&&r.nextElementSibling; if(h&&h.className==="hint") h.style.display="none"; }
-    $("setupDetails").open = !cfg.token;
-  } else if(!cfg.token || !cfg.gistId){ $("setupDetails").open = true; }
+  var API="";
+  var messages=[], editingId=null, selectedDept="HR";
+  var $=function(id){return document.getElementById(id);};
 
   // ---- department chips ----
-  var chipsEl = $("deptChips");
+  var chipsEl=$("deptChips");
   DEPTS.forEach(function(d){
-    var el = document.createElement("div");
-    el.className = "chip" + (d.id===selectedDept?" active":"");
-    el.style.borderColor = d.color;
-    if(d.id===selectedDept) el.style.background = d.color;
-    el.innerHTML = '<span class="swatch" style="background:'+d.color+'"></span>'+d.label;
-    el.onclick = function(){ selectDept(d.id); };
-    el.setAttribute("data-id", d.id);
+    var el=document.createElement("div");
+    el.className="chip"+(d.id===selectedDept?" active":"");
+    el.style.borderColor=d.color;
+    if(d.id===selectedDept) el.style.background=d.color;
+    el.innerHTML='<span class="swatch" style="background:'+d.color+'"></span>'+d.label;
+    el.setAttribute("data-id",d.id);
+    el.onclick=function(){selectDept(d.id);};
     chipsEl.appendChild(el);
   });
   function selectDept(id){
-    selectedDept = id;
-    Array.prototype.forEach.call(chipsEl.children, function(el){
-      var d = DEPTS.filter(function(x){return x.id===el.getAttribute("data-id");})[0];
-      var on = el.getAttribute("data-id")===id;
-      el.className = "chip"+(on?" active":"");
-      el.style.background = on ? d.color : "#fff";
+    selectedDept=id;
+    Array.prototype.forEach.call(chipsEl.children,function(el){
+      var d=DEPTS.filter(function(x){return x.id===el.getAttribute("data-id");})[0];
+      var on=el.getAttribute("data-id")===id;
+      el.className="chip"+(on?" active":"");
+      el.style.background=on?d.color:"#fff";
     });
   }
-  function deptOf(id){ return DEPTS.filter(function(d){return d.id===id;})[0] || DEPTS[5]; }
+  function deptOf(id){return DEPTS.filter(function(d){return d.id===id;})[0]||DEPTS[5];}
 
-  // ---- status helpers ----
-  function status(el, msg, type){
-    el.className = "status show " + type;
-    el.textContent = msg;
-  }
-  function clearStatus(el){ el.className = "status"; }
+  function status(el,msg,type){el.className="status show "+type;el.textContent=msg;}
 
-  // ---- GitHub Gist API ----
-  function apiHeaders(){
-    return {
-      "Authorization":"token "+cfg.token,
-      "Accept":"application/vnd.github+json",
-      "Content-Type":"application/json"
-    };
-  }
+  if(localStorage.getItem(LS_AUTHOR)) $("author").value=localStorage.getItem(LS_AUTHOR);
 
-  function fetchLatest(){
-    // read fresh from API (authenticated, avoids stale cache)
-    return fetch("https://api.github.com/gists/"+cfg.gistId, {headers:apiHeaders(), cache:"no-store"})
-      .then(function(r){
-        if(!r.ok) throw new Error("Gist se nepodařilo načíst ("+r.status+")");
-        return r.json();
-      })
-      .then(function(g){
-        var f = g.files && g.files[FILENAME];
-        if(!f) return {messages:[]};
-        var content = f.content;
-        if(f.truncated && f.raw_url){
-          return fetch(f.raw_url,{cache:"no-store"}).then(function(r){return r.json();});
-        }
-        try{ return JSON.parse(content); }catch(e){ return {messages:[]}; }
-      });
-  }
+  // ---- backend (Cloudflare Worker; adresa z config.json) ----
+  fetch('./config.json?t='+Date.now(),{cache:'no-store'})
+    .then(function(r){return r.json();})
+    .then(function(c){ API=(c&&c.api)||localStorage.getItem(LS_API)||""; boot(); })
+    .catch(function(){ API=localStorage.getItem(LS_API)||""; boot(); });
 
-  function writeData(data){
-    data.updated = new Date().toISOString();
-    var payload = { files:{} };
-    payload.files[FILENAME] = { content: JSON.stringify(data, null, 2) };
-    return fetch("https://api.github.com/gists/"+cfg.gistId, {
-      method:"PATCH", headers:apiHeaders(), body:JSON.stringify(payload)
-    }).then(function(r){
-      if(!r.ok) throw new Error("Uložení selhalo ("+r.status+")");
-      return r.json();
-    });
-  }
-
-  // ---- connect ----
-  $("connect").onclick = function(){
-    cfg.token = $("token").value.trim();
-    cfg.gistId = $("gistId").value.trim();
-    if(!cfg.token){ status($("connStatus"),"Vlož GitHub token.","err"); return; }
-    if(!cfg.gistId){ status($("connStatus"),"Vlož Gist ID nebo klikni na Vytvořit nový.","err"); return; }
-    saveCfg();
-    status($("connStatus"),"Připojuji…","info");
-    fetch("https://api.github.com/user",{headers:apiHeaders()})
-      .then(function(r){ if(!r.ok) throw new Error("Neplatný token ("+r.status+")"); return r.json(); })
-      .then(function(u){
-        cfg.user = u.login; saveCfg();
-        return loadMessages();
-      })
-      .then(function(){
-        status($("connStatus"),"✓ Připojeno jako "+cfg.user+". Vzkazy načteny.","ok");
-        showTvLink();
-      })
-      .catch(function(e){ status($("connStatus"), e.message, "err"); });
-  };
-
-  $("reload").onclick = function(){
-    if(!ensureCfg($("connStatus"))) return;
-    status($("connStatus"),"Načítám…","info");
-    loadMessages().then(function(){ status($("connStatus"),"✓ Načteno.","ok"); })
-      .catch(function(e){ status($("connStatus"), e.message,"err"); });
-  };
-
-  $("createGist").onclick = function(){
-    cfg.token = $("token").value.trim();
-    if(!cfg.token){ status($("connStatus"),"Nejdřív vlož GitHub token.","err"); return; }
-    saveCfg();
-    status($("connStatus"),"Zakládám nový Gist…","info");
-    var seed = {}; seed[FILENAME] = { content: JSON.stringify({messages:[],updated:new Date().toISOString()}, null, 2) };
-    fetch("https://api.github.com/gists",{
-      method:"POST", headers:apiHeaders(),
-      body:JSON.stringify({description:"LL Nástěnka — data", public:false, files:seed})
-    }).then(function(r){ if(!r.ok) throw new Error("Nepodařilo se založit ("+r.status+")"); return r.json(); })
-      .then(function(g){
-        cfg.gistId = g.id; cfg.user = g.owner ? g.owner.login : cfg.user; saveCfg();
-        $("gistId").value = g.id;
-        messages = [];
-        render();
-        status($("connStatus"),"✓ Nový Gist založen. Zkopíruj si odkaz pro TV níže.","ok");
-        showTvLink();
-      })
-      .catch(function(e){ status($("connStatus"), e.message,"err"); });
-  };
-
-  function showTvLink(){
-    if(!cfg.user || !cfg.gistId) return;
-    var raw = "https://gist.githubusercontent.com/"+cfg.user+"/"+cfg.gistId+"/raw/"+FILENAME;
-    var el = $("tvLink");
-    el.className = "tvlink show";
-    el.innerHTML = '<b>Odkaz pro TV (zadej ho v TV zobrazení do nastavení):</b><br>'+raw;
-  }
-
-  function ensureCfg(statusEl){
-    if(!cfg.token || !cfg.gistId){
-      status(statusEl,"Nejdřív se připoj v nastavení (token + Gist ID).","err");
-      $("setupDetails").open = true;
-      return false;
+  function boot(){
+    if(!API){
+      status($("saveStatus"),"Server nástěnky zatím není nastavený (config.json je prázdný). Jakmile bude Worker nasazený a adresa vložená, tohle zmizí.","err");
+      return;
     }
-    return true;
+    loadMessages().catch(function(e){ status($("saveStatus"),"Nepodařilo se načíst vzkazy: "+e.message,"err"); });
   }
 
-  function loadMessages(){
-    return fetchLatest().then(function(d){
-      messages = (d && d.messages) ? d.messages : [];
-      render();
+  function apiGet(){
+    var u=API+(API.indexOf("?")>=0?"&":"?")+"t="+Date.now();
+    return fetch(u,{cache:'no-store'}).then(function(r){
+      if(!r.ok) throw new Error("HTTP "+r.status); return r.json();
     });
   }
+  function apiPost(payload){
+    payload.key=WRITE_KEY;
+    return fetch(API,{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify(payload)})
+      .then(function(r){ if(!r.ok) throw new Error("HTTP "+r.status); return r.json(); });
+  }
 
-  // ---- save (fetch-modify-write to stay safe with multiple posters) ----
-  $("saveBtn").onclick = function(){
-    if(!ensureCfg($("saveStatus"))) return;
-    var title = $("title").value.trim();
-    var body = $("body").value.trim();
+  function loadMessages(){ return apiGet().then(function(d){ messages=(d&&d.messages)||[]; render(); }); }
+
+  // ---- save ----
+  $("saveBtn").onclick=function(){
+    if(!API){ status($("saveStatus"),"Server není nastavený.","err"); return; }
+    var title=$("title").value.trim();
+    var body=$("body").value.trim();
     if(!title){ status($("saveStatus"),"Doplň nadpis.","err"); return; }
-    cfg.author = $("author").value.trim(); saveCfg();
+    localStorage.setItem(LS_AUTHOR,$("author").value.trim());
 
-    var msg = {
+    var msg={
       id: editingId || ("m"+Date.now()+Math.floor(Math.random()*999)),
       dept: selectedDept,
       author: $("author").value.trim(),
       title: title,
       body: body,
-      priority: $("priority").checked ? "high":"normal",
-      validUntil: $("validUntil").value || "",
-      created: editingId ? (findMsg(editingId)||{}).created || new Date().toISOString() : new Date().toISOString()
+      priority: $("priority").checked?"high":"normal",
+      validUntil: $("validUntil").value||"",
+      created: editingId ? ((findMsg(editingId)||{}).created||new Date().toISOString()) : new Date().toISOString()
     };
-
-    $("saveBtn").disabled = true;
+    $("saveBtn").disabled=true;
     status($("saveStatus"), editingId?"Ukládám úpravu…":"Vyvěšuji…","info");
-
-    fetchLatest().then(function(d){
-      var list = (d && d.messages) ? d.messages : [];
-      var idx = -1;
-      for(var i=0;i<list.length;i++){ if(list[i].id===msg.id){ idx=i; break; } }
-      if(idx>=0) list[idx] = msg; else list.unshift(msg);
-      d.messages = list;
-      return writeData(d).then(function(){ messages = list; });
-    }).then(function(){
+    apiPost({action: editingId?"update":"add", msg:msg}).then(function(d){
+      messages=(d&&d.messages)||messages;
       status($("saveStatus"), editingId?"✓ Vzkaz upraven.":"✓ Vyvěšeno na nástěnku.","ok");
-      resetForm();
-      render();
+      resetForm(); render();
     }).catch(function(e){
-      status($("saveStatus"), e.message,"err");
-    }).then(function(){ $("saveBtn").disabled = false; });
+      status($("saveStatus"),"Chyba při ukládání: "+e.message,"err");
+    }).then(function(){ $("saveBtn").disabled=false; });
   };
-
-  $("cancelEdit").onclick = resetForm;
+  $("cancelEdit").onclick=resetForm;
 
   function resetForm(){
-    editingId = null;
-    $("title").value=""; $("body").value="";
-    $("priority").checked=false; $("validUntil").value="";
+    editingId=null;
+    $("title").value="";$("body").value="";
+    $("priority").checked=false;$("validUntil").value="";
     selectDept("HR");
-    $("formTitle").textContent = "Nový vzkaz";
-    $("saveBtn").textContent = "Vyvěsit na nástěnku";
+    $("formTitle").textContent="Nový vzkaz";
+    $("saveBtn").textContent="Vyvěsit na nástěnku";
     $("cancelEdit").style.display="none";
   }
-
-  function findMsg(id){ return messages.filter(function(m){return m.id===id;})[0]; }
+  function findMsg(id){return messages.filter(function(m){return m.id===id;})[0];}
 
   function editMsg(id){
-    var m = findMsg(id); if(!m) return;
-    editingId = id;
-    $("title").value = m.title; $("body").value = m.body||"";
-    $("author").value = m.author||""; $("validUntil").value = m.validUntil||"";
-    $("priority").checked = m.priority==="high";
+    var m=findMsg(id); if(!m) return;
+    editingId=id;
+    $("title").value=m.title;$("body").value=m.body||"";
+    $("author").value=m.author||"";$("validUntil").value=m.validUntil||"";
+    $("priority").checked=m.priority==="high";
     selectDept(m.dept);
-    $("formTitle").textContent = "Úprava vzkazu";
-    $("saveBtn").textContent = "Uložit změny";
+    $("formTitle").textContent="Úprava vzkazu";
+    $("saveBtn").textContent="Uložit změny";
     $("cancelEdit").style.display="inline-block";
     window.scrollTo({top:0,behavior:"smooth"});
   }
@@ -467,81 +320,57 @@
   function deleteMsg(id){
     if(!confirm("Opravdu smazat tento vzkaz?")) return;
     status($("saveStatus"),"Mažu…","info");
-    fetchLatest().then(function(d){
-      d.messages = (d.messages||[]).filter(function(m){return m.id!==id;});
-      return writeData(d).then(function(){ messages = d.messages; });
-    }).then(function(){
+    apiPost({action:"delete",id:id}).then(function(d){
+      messages=(d&&d.messages)||messages;
       status($("saveStatus"),"✓ Smazáno.","ok"); render();
-    }).catch(function(e){ status($("saveStatus"), e.message,"err"); });
+    }).catch(function(e){ status($("saveStatus"),"Chyba: "+e.message,"err"); });
   }
 
-  // ---- render list ----
-  function isExpired(m){
-    if(!m.validUntil) return false;
-    var end = new Date(m.validUntil+"T23:59:59");
-    return end < new Date();
-  }
-  function fmtDate(iso){
-    try{ return new Date(iso).toLocaleDateString("cs-CZ",{day:"numeric",month:"numeric",year:"numeric"}); }
-    catch(e){ return ""; }
-  }
+  // ---- render ----
+  function isExpired(m){ if(!m.validUntil) return false; return new Date(m.validUntil+"T23:59:59")<new Date(); }
+  function fmtDate(iso){ try{return new Date(iso).toLocaleDateString("cs-CZ",{day:"numeric",month:"numeric",year:"numeric"});}catch(e){return "";} }
 
   function render(){
-    var list = $("list");
-    $("count").textContent = messages.length ? "("+messages.length+")" : "";
-    if(!messages.length){
-      list.innerHTML = '<div class="empty">Zatím tu nic není. Vyvěs první vzkaz výše.</div>';
-      return;
-    }
-    var sorted = messages.slice().sort(function(a,b){
-      var ap=a.priority==="high"?1:0, bp=b.priority==="high"?1:0;
+    var list=$("list");
+    $("count").textContent=messages.length?("("+messages.length+")"):"";
+    if(!messages.length){ list.innerHTML='<div class="empty">Zatím tu nic není. Vyvěs první vzkaz výše.</div>'; return; }
+    var sorted=messages.slice().sort(function(a,b){
+      var ap=a.priority==="high"?1:0,bp=b.priority==="high"?1:0;
       if(ap!==bp) return bp-ap;
       return new Date(b.created)-new Date(a.created);
     });
-    list.innerHTML = "";
+    list.innerHTML="";
     sorted.forEach(function(m){
-      var d = deptOf(m.dept);
-      var exp = isExpired(m);
-      var el = document.createElement("div");
-      el.className = "msg"+(exp?" expired":"");
-      el.style.borderLeftColor = d.color;
-      var meta = [];
+      var d=deptOf(m.dept); var exp=isExpired(m);
+      var el=document.createElement("div");
+      el.className="msg"+(exp?" expired":"");
+      el.style.borderLeftColor=d.color;
+      var meta=[];
       if(m.author) meta.push("— "+m.author);
       meta.push(fmtDate(m.created));
       if(m.validUntil) meta.push((exp?"vypršelo ":"zobrazovat do ")+fmtDate(m.validUntil+"T00:00:00"));
-      el.innerHTML =
+      el.innerHTML=
         '<div class="msg-head">'+
           '<span class="badge" style="background:'+d.color+'">'+d.label+'</span>'+
           (m.priority==="high"?'<span class="flag">DŮLEŽITÉ</span>':'')+
           (exp?'<span style="font-size:12px;color:var(--err);font-weight:600">vypršelo</span>':'')+
-        '</div>'+
-        '<h3></h3><p></p>'+
-        '<div class="msg-meta">'+meta.map(function(x){return '<span></span>';}).join('')+'</div>'+
+        '</div><h3></h3><p></p>'+
+        '<div class="msg-meta">'+meta.map(function(){return '<span></span>';}).join('')+'</div>'+
         '<div class="msg-actions">'+
           '<button class="btn ghost small" data-edit="'+m.id+'">Upravit</button>'+
           '<button class="btn danger small" data-del="'+m.id+'">Smazat</button>'+
         '</div>';
-      el.querySelector("h3").textContent = m.title;
-      el.querySelector("p").textContent = m.body||"";
-      var spans = el.querySelectorAll(".msg-meta span");
-      meta.forEach(function(x,i){ if(spans[i]) spans[i].textContent = x; });
+      el.querySelector("h3").textContent=m.title;
+      el.querySelector("p").textContent=m.body||"";
+      var spans=el.querySelectorAll(".msg-meta span");
+      meta.forEach(function(x,i){ if(spans[i]) spans[i].textContent=x; });
       list.appendChild(el);
     });
-    // wire buttons
-    Array.prototype.forEach.call(list.querySelectorAll("[data-edit]"),function(b){
-      b.onclick=function(){ editMsg(b.getAttribute("data-edit")); };
-    });
-    Array.prototype.forEach.call(list.querySelectorAll("[data-del]"),function(b){
-      b.onclick=function(){ deleteMsg(b.getAttribute("data-del")); };
-    });
-  }
-
-  // auto-connect if configured
-  if(cfg.token && cfg.gistId){
-    loadMessages().then(function(){ showTvLink(); }).catch(function(){});
-    if(cfg.user) showTvLink();
+    Array.prototype.forEach.call(list.querySelectorAll("[data-edit]"),function(b){ b.onclick=function(){editMsg(b.getAttribute("data-edit"));}; });
+    Array.prototype.forEach.call(list.querySelectorAll("[data-del]"),function(b){ b.onclick=function(){deleteMsg(b.getAttribute("data-del"));}; });
   }
 })();
+
 </script>
 </body>
 </html>
