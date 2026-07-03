@@ -1,0 +1,15 @@
+
+ ⛅️ wrangler 4.107.0
+────────────────────
+Total Upload: 3.41 KiB / gzip: 1.27 KiB
+Your Worker has access to the following bindings:
+Binding                                               Resource                  
+env.NASTENKA (d37402d41f9346d3bdbf96ac41c38bac)       KV Namespace              
+env.WRITE_KEY ("LL-nastenka-8Kq3Zx7m")                Environment Variable      
+
+Uploaded ll-nastenka (1.64 sec)
+Deployed ll-nastenka triggers (0.56 sec)
+  https://ll-nastenka.literova.workers.dev
+Current Version ID: 0ac57fb2-4e08-493a-b903-2731ed097bef
+
+Cloudflare collects anonymous telemetry about your usage of Wrangler. Learn more at https://github.com/cloudflare/workers-sdk/tree/main/packages/wrangler/telemetry.md
