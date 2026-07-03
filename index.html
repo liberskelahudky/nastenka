@@ -67,7 +67,7 @@
   .note:before{content:"";position:absolute;left:0;top:0;bottom:0;width:8px;background:var(--c)}
   .tab{
     align-self:flex-start;display:inline-flex;align-items:center;gap:.6vw;
-    background:var(--c);color:#fff;font-weight:700;font-size:clamp(12px,1.15vw,20px);
+    background:var(--c);color:#fff;font-weight:700;font-size:calc(var(--fs,1.3) * clamp(13px,1.3vw,22px));
     text-transform:uppercase;letter-spacing:1px;padding:.5vh 1vw;border-radius:8px;
     margin-bottom:1.4vh;
   }
@@ -76,12 +76,12 @@
     background:var(--orange);color:#fff;font-weight:700;font-size:clamp(10px,.85vw,15px);
     letter-spacing:1.5px;padding:.4vh 3.4vw;transform:rotate(38deg)}
   .note h2{font-family:'Fraunces',serif;font-weight:600;color:var(--brown);
-    font-size:clamp(20px,2.1vw,40px);line-height:1.12;margin-bottom:1vh}
-  .note p{font-size:clamp(14px,1.35vw,26px);color:#4a3a2c;line-height:1.4;
+    font-size:calc(var(--fs,1.3) * clamp(24px,2.5vw,48px));line-height:1.12;margin-bottom:1vh}
+  .note p{font-size:calc(var(--fs,1.3) * clamp(16px,1.7vw,32px));color:#4a3a2c;line-height:1.4;
     white-space:pre-wrap;flex:1;overflow:hidden}
   .note .foot{display:flex;justify-content:space-between;align-items:baseline;
     gap:1vw;margin-top:1.4vh;padding-top:1vh;border-top:1px solid var(--line);
-    font-size:clamp(12px,1.1vw,20px);color:var(--muted);font-weight:600}
+    font-size:calc(var(--fs,1.3) * clamp(13px,1.2vw,22px));color:var(--muted);font-weight:600}
   .note .foot .auth{color:var(--brown)}
 
   /* ---- footer / pager ---- */
@@ -107,6 +107,17 @@
   .gear{position:fixed;bottom:10px;right:12px;opacity:.12;font-size:20px;cursor:pointer;z-index:20}
   .gear:hover{opacity:.5}
   .hidden{display:none!important}
+  .note .photo{width:100%;max-height:42%;object-fit:cover;border-radius:12px;margin-bottom:1.4vh;flex:none}
+  .ctrlbar{position:fixed;left:50%;bottom:14px;transform:translateX(-50%);z-index:30;
+    display:flex;align-items:center;gap:10px;flex-wrap:wrap;justify-content:center;
+    background:rgba(59,26,13,.93);color:#fff;padding:10px 16px;border-radius:14px;
+    font-size:15px;box-shadow:0 8px 30px rgba(0,0,0,.25);max-width:94vw}
+  .ctrlbar span{opacity:.85;font-weight:600;font-size:13px}
+  .ctrlbar button{font:inherit;font-weight:700;font-size:15px;cursor:pointer;border:none;
+    background:rgba(255,255,255,.15);color:#fff;border-radius:8px;padding:7px 12px;min-width:40px}
+  .ctrlbar button:hover{background:rgba(255,255,255,.30)}
+  .ctrlbar button.on{background:var(--orange)}
+  .ctrlbar .sep{width:1px;height:22px;background:rgba(255,255,255,.25)}
 </style>
 </head>
 <body>
@@ -139,6 +150,16 @@
     </div>
   </div>
 
+  <div class="ctrlbar hidden" id="ctrlBar">
+    <span>Písmo</span>
+    <button data-fs="down">A−</button><button data-fs="up">A+</button>
+    <div class="sep"></div>
+    <span>Vzkazů na obrazovku</span>
+    <button data-pp="1">1</button><button data-pp="2">2</button><button data-pp="3">3</button><button data-pp="4">4</button><button data-pp="6">6</button>
+    <div class="sep"></div>
+    <button id="ctrlClose">Hotovo</button>
+  </div>
+
   <div class="gear" id="gear" title="Nastavení">⚙</div>
 
 <script>
@@ -147,7 +168,13 @@
   var LS="ll_nastenka_tv_url";
   var REFRESH_MS=60000;   // data reload
   var PAGE_MS=13000;      // page rotation
-  var PER_PAGE=6;         // max notes per screen
+  var LS_VIEW="ll_nastenka_tv_view";
+  function loadView(){ var v; try{v=JSON.parse(localStorage.getItem(LS_VIEW))||{};}catch(e){v={};} return {perPage:v.perPage||2, fs:v.fs||1.3}; }
+  var VIEW=loadView();
+  var PER_PAGE=VIEW.perPage;   // pocet vzkazu na obrazovku (nastavitelne na TV)
+  function saveView(){ localStorage.setItem(LS_VIEW,JSON.stringify(VIEW)); }
+  function markPP(){ var b=document.querySelectorAll('#ctrlBar [data-pp]'); for(var i=0;i<b.length;i++){ b[i].className=(parseInt(b[i].getAttribute('data-pp'))===VIEW.perPage)?'on':''; } }
+  function applyView(){ document.documentElement.style.setProperty('--fs',VIEW.fs); PER_PAGE=VIEW.perPage; markPP(); }
   var BODY_MAX=240;       // truncate on TV
 
   var DEPTS={
@@ -185,7 +212,22 @@
     $("setupState").classList.add("hidden");
     $("board").classList.remove("hidden");$("pager").classList.remove("hidden");
   }
-  $("gear").onclick=showSetup;
+  $("gear").onclick=function(){ if(!rawUrl) showSetup(); else $("ctrlBar").classList.toggle("hidden"); };
+  $("ctrlClose").onclick=function(){ $("ctrlBar").classList.add("hidden"); };
+  (function(){
+    var fsb=document.querySelectorAll('#ctrlBar [data-fs]');
+    for(var i=0;i<fsb.length;i++){ (function(btn){ btn.onclick=function(){
+      var dir=btn.getAttribute('data-fs');
+      VIEW.fs=Math.max(0.8,Math.min(2.4, VIEW.fs+(dir==='up'?0.15:-0.15)));
+      VIEW.fs=Math.round(VIEW.fs*100)/100; saveView();
+      document.documentElement.style.setProperty('--fs',VIEW.fs);
+    };})(fsb[i]); }
+    var ppb=document.querySelectorAll('#ctrlBar [data-pp]');
+    for(var j=0;j<ppb.length;j++){ (function(btn){ btn.onclick=function(){
+      VIEW.perPage=parseInt(btn.getAttribute('data-pp')); saveView(); PER_PAGE=VIEW.perPage; markPP(); buildPages();
+    };})(ppb[j]); }
+  })();
+  applyView();
   $("saveSetup").onclick=function(){
     var v=$("rawUrlInput").value.trim();
     if(!v) return;
@@ -273,6 +315,7 @@
       var footParts=[];
       var el=document.createElement("div");
       note.innerHTML =
+        (m.img?('<img class="photo" src="'+rawUrl+(rawUrl.indexOf("?")>=0?"&":"?")+'img='+m.img+'&v='+encodeURIComponent(m.created)+'">'):'')+
         '<span class="tab">'+d.label+'</span>'+
         '<h2></h2><p></p>'+
         '<div class="foot"><span class="auth"></span><span class="dt"></span></div>';
