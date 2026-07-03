@@ -10,29 +10,30 @@ jobs:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
         with:
-          node-version: 20
-      - name: Deploy + capture URL
+          node-version: 22
+      - name: Deploy worker
         working-directory: worker
         env:
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
         run: |
-          npx --yes wrangler@latest deploy 2>&1 | tee deploy.log || true
+          set -o pipefail
+          npx --yes wrangler@latest deploy 2>&1 | tee deploy.log
+      - name: Capture URL
+        if: always()
+        working-directory: worker
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+        run: |
           URL=$(grep -oE 'https://[a-zA-Z0-9._-]+\.workers\.dev' deploy.log | head -1)
           if [ -z "$URL" ]; then
-            ACC=$(curl -s -H "Authorization: Bearer $CLOUDFLARE_API_TOKEN" \
-              https://api.cloudflare.com/client/v4/accounts \
-              | python3 -c "import sys,json;d=json.load(sys.stdin);print(d['result'][0]['id'] if d.get('result') else '')")
-            echo "ACCOUNT_ID=$ACC" >> deploy.log
-            SUB=$(curl -s -H "Authorization: Bearer $CLOUDFLARE_API_TOKEN" \
-              "https://api.cloudflare.com/client/v4/accounts/$ACC/workers/subdomain" \
-              | python3 -c "import sys,json;d=json.load(sys.stdin);print((d.get('result') or {}).get('subdomain',''))")
-            echo "SUBDOMAIN=$SUB" >> deploy.log
-            if [ -n "$SUB" ]; then URL="https://ll-nastenka.${SUB}.workers.dev"; fi
+            ACC=$(curl -s -H "Authorization: Bearer $CLOUDFLARE_API_TOKEN" https://api.cloudflare.com/client/v4/accounts | python3 -c "import sys,json;d=json.load(sys.stdin);print(d['result'][0]['id'] if d.get('result') else '')")
+            SUB=$(curl -s -H "Authorization: Bearer $CLOUDFLARE_API_TOKEN" "https://api.cloudflare.com/client/v4/accounts/$ACC/workers/subdomain" | python3 -c "import sys,json;d=json.load(sys.stdin);print((d.get('result') or {}).get('subdomain',''))")
+            [ -n "$SUB" ] && URL="https://ll-nastenka.${SUB}.workers.dev"
           fi
           echo "$URL" > ../worker-url.txt
           cp deploy.log ../deploy.log
-          echo "FINAL_URL=$URL"
       - name: Commit results
+        if: always()
         run: |
           git config user.name "deploy-bot"
           git config user.email "deploy@users.noreply.github.com"
