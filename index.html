@@ -1,0 +1,305 @@
+<!DOCTYPE html>
+<html lang="cs">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>LL Nástěnka</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500;9..144,600;9..144,700&family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --orange:#E85520;
+    --brown:#3B1A0D;
+    --olive:#6B7A50;
+    --cream:#F0E8D6;
+    --paper:#FBF6EC;
+    --ink:#2A1508;
+    --muted:#9c876c;
+    --line:#E4D8C2;
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  html,body{height:100%;overflow:hidden}
+  body{
+    font-family:'Plus Jakarta Sans',system-ui,sans-serif;
+    background:
+      radial-gradient(circle at 20% 15%, rgba(232,85,32,.05), transparent 45%),
+      radial-gradient(circle at 85% 85%, rgba(107,122,80,.06), transparent 45%),
+      var(--cream);
+    color:var(--ink);
+    height:100vh;display:flex;flex-direction:column;
+    padding:2.2vh 2.4vw;
+  }
+
+  /* ---- top bar ---- */
+  header{
+    display:flex;align-items:center;justify-content:space-between;
+    padding-bottom:1.6vh;margin-bottom:2vh;border-bottom:3px solid var(--brown);
+    flex:none;
+  }
+  .brand{font-family:'Fraunces',serif;font-weight:600;font-size:clamp(24px,3.4vw,52px);
+    color:var(--brown);letter-spacing:-.5px;line-height:1}
+  .brand span{color:var(--orange)}
+  .brand small{display:block;font-family:'Plus Jakarta Sans';font-weight:600;
+    font-size:clamp(11px,1vw,18px);color:var(--olive);letter-spacing:2px;
+    text-transform:uppercase;margin-top:.5vh}
+  .clock{text-align:right;line-height:1}
+  .time{font-family:'Fraunces',serif;font-weight:600;font-size:clamp(26px,3.6vw,56px);color:var(--brown)}
+  .date{font-size:clamp(12px,1.2vw,22px);color:var(--olive);font-weight:600;text-transform:capitalize;margin-top:.4vh}
+
+  /* ---- board ---- */
+  .board{flex:1;display:grid;gap:1.6vw;min-height:0;
+    grid-template-columns:repeat(auto-fit,minmax(min(100%,30vw),1fr));
+    align-content:start;}
+  .board.cols1{grid-template-columns:1fr}
+  .board.cols2{grid-template-columns:1fr 1fr}
+  .board.cols3{grid-template-columns:1fr 1fr 1fr}
+
+  .note{
+    background:var(--paper);border-radius:16px;padding:2.2vh 1.6vw;
+    border:1px solid var(--line);position:relative;overflow:hidden;
+    box-shadow:0 4px 18px rgba(59,26,13,.06);
+    display:flex;flex-direction:column;
+    animation:pop .5s cubic-bezier(.2,.9,.3,1.2) both;
+  }
+  @keyframes pop{from{opacity:0;transform:translateY(14px) scale(.98)}to{opacity:1;transform:none}}
+  /* colored spine + pin tab */
+  .note:before{content:"";position:absolute;left:0;top:0;bottom:0;width:8px;background:var(--c)}
+  .tab{
+    align-self:flex-start;display:inline-flex;align-items:center;gap:.6vw;
+    background:var(--c);color:#fff;font-weight:700;font-size:clamp(12px,1.15vw,20px);
+    text-transform:uppercase;letter-spacing:1px;padding:.5vh 1vw;border-radius:8px;
+    margin-bottom:1.4vh;
+  }
+  .note.high{border:2px solid var(--orange);background:#fff}
+  .note.high:after{content:"DŮLEŽITÉ";position:absolute;top:1.6vh;right:-3.2vw;
+    background:var(--orange);color:#fff;font-weight:700;font-size:clamp(10px,.85vw,15px);
+    letter-spacing:1.5px;padding:.4vh 3.4vw;transform:rotate(38deg)}
+  .note h2{font-family:'Fraunces',serif;font-weight:600;color:var(--brown);
+    font-size:clamp(20px,2.1vw,40px);line-height:1.12;margin-bottom:1vh}
+  .note p{font-size:clamp(14px,1.35vw,26px);color:#4a3a2c;line-height:1.4;
+    white-space:pre-wrap;flex:1;overflow:hidden}
+  .note .foot{display:flex;justify-content:space-between;align-items:baseline;
+    gap:1vw;margin-top:1.4vh;padding-top:1vh;border-top:1px solid var(--line);
+    font-size:clamp(12px,1.1vw,20px);color:var(--muted);font-weight:600}
+  .note .foot .auth{color:var(--brown)}
+
+  /* ---- footer / pager ---- */
+  footer{flex:none;display:flex;align-items:center;justify-content:center;gap:1vw;
+    margin-top:1.6vh;height:2.6vh}
+  .dot{width:.9vw;height:.9vw;max-width:14px;max-height:14px;border-radius:50%;
+    background:var(--line);transition:all .3s}
+  .dot.on{background:var(--orange);transform:scale(1.35)}
+
+  /* ---- empty / setup ---- */
+  .center{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;
+    flex-direction:column;text-align:center;padding:6vw}
+  .center h1{font-family:'Fraunces',serif;font-size:clamp(28px,3vw,54px);color:var(--brown);margin-bottom:2vh}
+  .center p{font-size:clamp(15px,1.4vw,26px);color:var(--olive);max-width:60ch}
+  .setupbox{background:var(--paper);border:1px solid var(--line);border-radius:16px;
+    padding:4vh 4vw;max-width:640px;margin-top:2vh}
+  .setupbox label{display:block;text-align:left;font-weight:600;color:var(--brown);margin:2vh 0 .6vh;font-size:16px}
+  .setupbox input{width:100%;font:inherit;font-size:16px;padding:12px 14px;
+    border:1.5px solid var(--line);border-radius:10px;background:#fff}
+  .setupbox button{margin-top:2.4vh;font:inherit;font-weight:600;font-size:16px;
+    background:var(--orange);color:#fff;border:none;border-radius:10px;padding:13px 26px;cursor:pointer}
+  .hint{font-size:13px;color:var(--muted);margin-top:.6vh;text-align:left}
+  .gear{position:fixed;bottom:10px;right:12px;opacity:.12;font-size:20px;cursor:pointer;z-index:20}
+  .gear:hover{opacity:.5}
+  .hidden{display:none!important}
+</style>
+</head>
+<body>
+  <header>
+    <div class="brand">Libeřské <span>lahůdky</span><small>Nástěnka pro tým</small></div>
+    <div class="clock">
+      <div class="time" id="time">–:–</div>
+      <div class="date" id="date"></div>
+    </div>
+  </header>
+
+  <div class="board" id="board"></div>
+  <footer id="pager"></footer>
+
+  <!-- empty state -->
+  <div class="center hidden" id="emptyState">
+    <h1>🌿 Nástěnka je čistá</h1>
+    <p>Aktuálně tu nejsou žádné vzkazy. Jakmile něco vyvěsí HR nebo výroba, objeví se to tady.</p>
+  </div>
+
+  <!-- setup -->
+  <div class="center hidden" id="setupState">
+    <div class="brand">Libeřské <span>lahůdky</span></div>
+    <div class="setupbox">
+      <h1 style="font-family:'Fraunces';color:var(--brown);font-size:26px">Nastavení televize</h1>
+      <label>Odkaz pro TV <span style="font-weight:400;color:var(--muted)">(z admin stránky)</span></label>
+      <input type="text" id="rawUrlInput" placeholder="https://gist.githubusercontent.com/…/raw/nastenka.json">
+      <div class="hint">Zkopíruj odkaz, který se ti zobrazí v admin stránce po připojení, a vlož ho sem. Nastaví se jen na této televizi.</div>
+      <button id="saveSetup">Uložit a spustit</button>
+    </div>
+  </div>
+
+  <div class="gear" id="gear" title="Nastavení">⚙</div>
+
+<script>
+(function(){
+  "use strict";
+  var LS="ll_nastenka_tv_url";
+  var REFRESH_MS=60000;   // data reload
+  var PAGE_MS=13000;      // page rotation
+  var PER_PAGE=6;         // max notes per screen
+  var BODY_MAX=240;       // truncate on TV
+
+  var DEPTS={
+    HR:{label:"HR",color:"#6B7A50"},
+    VYROBA:{label:"Výroba",color:"#E85520"},
+    VEDENI:{label:"Vedení",color:"#3B1A0D"},
+    MARKETING:{label:"Marketing",color:"#B8894A"},
+    PROVOZ:{label:"Provoz",color:"#5E7B8B"},
+    OSTATNI:{label:"Vzkaz",color:"#8A8A7A"}
+  };
+
+  var $=function(id){return document.getElementById(id);};
+  // Baked at deploy — same data source for every TV, zero setup:
+  var DATA_URL="https://gist.githubusercontent.com/liberskelahudky/7f9c212ad166a73237504b90993eaae1/raw/nastenka.json";
+  var baked=(DATA_URL.indexOf("___")<0)?DATA_URL:"";
+  var rawUrl = baked || localStorage.getItem(LS)||"";
+  var messages=[], pages=[], pageIdx=0, pageTimer=null;
+
+  // ---- clock ----
+  var DNI=["Neděle","Pondělí","Úterý","Středa","Čtvrtek","Pátek","Sobota"];
+  var MES=["ledna","února","března","dubna","května","června","července","srpna","září","října","listopadu","prosince"];
+  function tick(){
+    var d=new Date();
+    var h=d.getHours(), m=d.getMinutes();
+    $("time").textContent = h+":"+(m<10?"0"+m:m);
+    $("date").textContent = DNI[d.getDay()]+" "+d.getDate()+". "+MES[d.getMonth()];
+  }
+  tick(); setInterval(tick,10000);
+
+  // ---- setup UI ----
+  function showSetup(){
+    $("board").classList.add("hidden");$("pager").classList.add("hidden");
+    $("emptyState").classList.add("hidden");
+    $("setupState").classList.remove("hidden");
+    if(rawUrl) $("rawUrlInput").value=rawUrl;
+  }
+  function hideSetup(){
+    $("setupState").classList.add("hidden");
+    $("board").classList.remove("hidden");$("pager").classList.remove("hidden");
+  }
+  $("gear").onclick=showSetup;
+  $("saveSetup").onclick=function(){
+    var v=$("rawUrlInput").value.trim();
+    if(!v) return;
+    rawUrl=v; localStorage.setItem(LS,v);
+    hideSetup(); loadData();
+  };
+
+  if(!rawUrl){ showSetup(); }
+  else { loadData(); }
+
+  // ---- data ----
+  function loadData(){
+    var url = rawUrl + (rawUrl.indexOf("?")>=0?"&":"?") + "t=" + Date.now();
+    fetch(url,{cache:"no-store"})
+      .then(function(r){ if(!r.ok) throw new Error(r.status); return r.json(); })
+      .then(function(d){
+        messages = filterActive((d && d.messages)?d.messages:[]);
+        buildPages();
+      })
+      .catch(function(e){ /* keep showing last content */ });
+  }
+  setInterval(loadData, REFRESH_MS);
+
+  function filterActive(list){
+    var now=new Date();
+    return list.filter(function(m){
+      if(!m.validUntil) return true;
+      return new Date(m.validUntil+"T23:59:59") >= now;
+    }).sort(function(a,b){
+      var ap=a.priority==="high"?1:0,bp=b.priority==="high"?1:0;
+      if(ap!==bp) return bp-ap;
+      return new Date(b.created)-new Date(a.created);
+    });
+  }
+
+  function buildPages(){
+    if(!messages.length){
+      $("board").classList.add("hidden");$("pager").classList.add("hidden");
+      $("emptyState").classList.remove("hidden");
+      if(pageTimer){clearInterval(pageTimer);pageTimer=null;}
+      return;
+    }
+    $("emptyState").classList.add("hidden");
+    $("board").classList.remove("hidden");$("pager").classList.remove("hidden");
+    pages=[];
+    for(var i=0;i<messages.length;i+=PER_PAGE) pages.push(messages.slice(i,i+PER_PAGE));
+    if(pageIdx>=pages.length) pageIdx=0;
+    renderPage();
+    if(pageTimer){clearInterval(pageTimer);pageTimer=null;}
+    if(pages.length>1){
+      pageTimer=setInterval(function(){
+        pageIdx=(pageIdx+1)%pages.length; renderPage();
+      }, PAGE_MS);
+    }
+  }
+
+  function trunc(t){
+    if(!t) return "";
+    if(t.length<=BODY_MAX) return t;
+    return t.slice(0,BODY_MAX).replace(/\s+\S*$/,"")+"…";
+  }
+  function fmt(iso){
+    try{return new Date(iso).toLocaleDateString("cs-CZ",{day:"numeric",month:"numeric"});}
+    catch(e){return "";}
+  }
+
+  function renderPage(){
+    var page=pages[pageIdx]||[];
+    var board=$("board");
+    board.className="board";
+    var n=page.length;
+    board.classList.add(n<=1?"cols1":(n<=2?"cols2":(n<=4?"cols2":"cols3")));
+    board.innerHTML="";
+    page.forEach(function(m,i){
+      var d=DEPTS[m.dept]||DEPTS.OSTATNI;
+      var note=document.createElement("div");
+      note.className="note"+(m.priority==="high"?" high":"");
+      note.style.setProperty("--c", d.color);
+      note.style.animationDelay=(i*0.08)+"s";
+      var footParts=[];
+      var el=document.createElement("div");
+      note.innerHTML =
+        '<span class="tab">'+d.label+'</span>'+
+        '<h2></h2><p></p>'+
+        '<div class="foot"><span class="auth"></span><span class="dt"></span></div>';
+      note.querySelector("h2").textContent=m.title||"";
+      note.querySelector("p").textContent=trunc(m.body||"");
+      note.querySelector(".auth").textContent=m.author?("— "+m.author):"";
+      note.querySelector(".dt").textContent=
+        (m.validUntil?("do "+fmt(m.validUntil+"T00:00:00")):("vyvěšeno "+fmt(m.created)));
+      board.appendChild(note);
+    });
+    // pager dots
+    var pager=$("pager"); pager.innerHTML="";
+    if(pages.length>1){
+      for(var p=0;p<pages.length;p++){
+        var dot=document.createElement("div");
+        dot.className="dot"+(p===pageIdx?" on":"");
+        pager.appendChild(dot);
+      }
+    }
+  }
+
+  // keyboard: S = setup, arrows = manual page
+  document.addEventListener("keydown",function(e){
+    if(e.key==="s"||e.key==="S") showSetup();
+    if(e.key==="Escape") hideSetup();
+    if(e.key==="ArrowRight"&&pages.length>1){pageIdx=(pageIdx+1)%pages.length;renderPage();}
+    if(e.key==="ArrowLeft"&&pages.length>1){pageIdx=(pageIdx-1+pages.length)%pages.length;renderPage();}
+  });
+})();
+</script>
+</body>
+</html>
